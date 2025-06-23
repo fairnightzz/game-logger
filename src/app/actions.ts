@@ -226,3 +226,100 @@ export const logSessionAction = async (formData: FormData) => {
   revalidatePath(`/groups/${groupId}`);
   redirect(`/groups/${groupId}`);
 };
+
+export const joinGroupAction = async (formData: FormData) => {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return encodedRedirect(
+      "error",
+      "/dashboard",
+      "You must be logged in to join a group",
+    );
+  }
+
+  const joinCode = formData.get("join_code")?.toString()?.toUpperCase();
+
+  if (!joinCode) {
+    return encodedRedirect("error", "/dashboard", "Join code is required");
+  }
+
+  let groupId: string;
+
+  try {
+    // Check if user exists in public.users table
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    if (!existingUser) {
+      return encodedRedirect(
+        "error",
+        "/dashboard",
+        "User profile not found. Please try signing out and back in.",
+      );
+    }
+
+    // Find the group by join code
+    const { data: group, error: groupError } = await supabase
+      .from("game_groups")
+      .select("id")
+      .eq("join_code", joinCode)
+      .single();
+
+    if (groupError || !group) {
+      return encodedRedirect(
+        "error",
+        "/dashboard",
+        "Invalid join code. Please check and try again.",
+      );
+    }
+
+    // Check if user is already a member
+    const { data: existingMembership } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", group.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (existingMembership) {
+      return encodedRedirect(
+        "error",
+        "/dashboard",
+        "You are already a member of this group",
+      );
+    }
+
+    // Add user as member
+    const { error: memberError } = await supabase.from("group_members").insert({
+      user_id: user.id,
+      group_id: group.id,
+      role: "member",
+    });
+
+    if (memberError) {
+      console.error("Member creation error:", memberError);
+      return encodedRedirect(
+        "error",
+        "/dashboard",
+        "Failed to join group. Please try again.",
+      );
+    }
+
+    groupId = group.id;
+  } catch (error) {
+    console.error("Error joining group:", error);
+    return encodedRedirect("error", "/dashboard", "Failed to join group");
+  }
+
+  // Redirect outside of try-catch block
+  revalidatePath("/dashboard");
+  redirect(`/groups/${groupId}`);
+};

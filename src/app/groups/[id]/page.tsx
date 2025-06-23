@@ -9,8 +9,17 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, Trophy } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Calendar, Trophy, Settings, Users, Share2 } from "lucide-react";
 import { LogSessionForm } from "@/components/log-session-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface GroupPageProps {
   params: {
@@ -73,7 +82,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
     .select("*")
     .order("name");
 
-  // Fetch recent sessions
+  // Fetch sessions with detailed player information
   const { data: sessions } = await supabase
     .from("game_sessions")
     .select(
@@ -81,6 +90,10 @@ export default async function GroupPage({ params }: GroupPageProps) {
       *,
       games (
         name
+      ),
+      users:created_by (
+        full_name,
+        email
       ),
       game_session_players (
         *,
@@ -93,122 +106,339 @@ export default async function GroupPage({ params }: GroupPageProps) {
     `,
     )
     .eq("group_id", params.id)
-    .order("played_at", { ascending: false })
-    .limit(5);
+    .order("played_at", { ascending: false });
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Group Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{group.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              Created {new Date(group.created_at).toLocaleDateString()}
-            </p>
+    <div className="bg-gray-50 min-h-screen">
+      <main className="w-full">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">{group.name}</h1>
+              <p className="text-muted-foreground">
+                {members?.length || 0} members • Created{" "}
+                {new Date(group.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Log Session
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Log New Session</DialogTitle>
+                    <DialogDescription>
+                      Record a new game session for your group
+                    </DialogDescription>
+                  </DialogHeader>
+                  <LogSessionForm
+                    groupId={params.id}
+                    games={games || []}
+                    members={members || []}
+                  />
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            </div>
           </div>
-          <Badge variant="secondary" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            {members?.length || 0} members
-          </Badge>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Log Session Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Log New Session
-                </CardTitle>
-                <CardDescription>
-                  Record a new game session for your group
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LogSessionForm
-                  groupId={params.id}
-                  games={games || []}
-                  members={members || []}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          {/* Tabs */}
+          <Tabs defaultValue="sessions" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="sessions">
+                <Calendar className="w-4 h-4 mr-2" />
+                Sessions
+              </TabsTrigger>
+              <TabsTrigger value="stats">
+                <Trophy className="w-4 h-4 mr-2" />
+                Stats
+              </TabsTrigger>
+              <TabsTrigger value="settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Group Info Sidebar */}
-          <div className="space-y-6">
-            {/* Members Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Members
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {members?.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {member.users?.full_name ||
-                            member.users?.email ||
-                            "Unknown"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {member.role === "admin" ? "Admin" : "Member"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Sessions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Recent Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {sessions?.length ? (
-                    sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="p-3 rounded-lg bg-muted/50"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">
-                            {session.games?.name || "Unknown Game"}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">
-                            {new Date(session.played_at).toLocaleDateString()}
+            <TabsContent value="sessions" className="space-y-6">
+              <div className="space-y-4">
+                {sessions?.length ? (
+                  sessions.map((session) => (
+                    <Card key={session.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg">
+                              {session.games?.name || "Unknown Game"}
+                            </CardTitle>
+                            <CardDescription>
+                              {new Date(session.played_at).toLocaleDateString()}{" "}
+                              • Logged by{" "}
+                              {session.users?.full_name ||
+                                session.users?.email ||
+                                "Unknown"}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline">
+                            {session.game_session_players?.length || 0} players
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {session.game_session_players?.length || 0} players
-                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {["win", "loss", "draw"].map((outcome) => {
+                            const players =
+                              session.game_session_players?.filter(
+                                (p) => p.outcome === outcome,
+                              ) || [];
+                            if (!players.length) return null;
+
+                            return (
+                              <div key={outcome}>
+                                <h4 className="font-medium mb-2 capitalize">
+                                  {outcome}s
+                                </h4>
+                                <div className="space-y-1">
+                                  {players.map((player, idx) => (
+                                    <div key={idx} className="text-sm">
+                                      {player.users?.full_name ||
+                                        player.users?.email ||
+                                        "Unknown"}
+                                      {player.role && (
+                                        <span className="text-muted-foreground">
+                                          {" "}
+                                          ({player.role})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {session.notes && (
+                          <div className="mt-4 pt-4 border-t">
+                            <p className="text-sm text-muted-foreground">
+                              {session.notes}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card>
+                    <CardContent className="text-center py-12">
+                      <Trophy className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        No Sessions Yet
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        Start tracking your game sessions with this group.
+                      </p>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Log Your First Session
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Log New Session</DialogTitle>
+                            <DialogDescription>
+                              Record a new game session for your group
+                            </DialogDescription>
+                          </DialogHeader>
+                          <LogSessionForm
+                            groupId={params.id}
+                            games={games || []}
+                            members={members || []}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="stats" className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Overall Win Rates</CardTitle>
+                    <CardDescription>Win percentage by player</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {members?.map((member, idx) => {
+                        // Calculate win rate for this member
+                        const memberSessions =
+                          sessions?.filter((session) =>
+                            session.game_session_players?.some(
+                              (p) => p.user_id === member.user_id,
+                            ),
+                          ) || [];
+                        const wins =
+                          sessions?.filter((session) =>
+                            session.game_session_players?.some(
+                              (p) =>
+                                p.user_id === member.user_id &&
+                                p.outcome === "win",
+                            ),
+                          )?.length || 0;
+                        const winRate =
+                          memberSessions.length > 0
+                            ? Math.round((wins / memberSessions.length) * 100)
+                            : 0;
+
+                        return (
+                          <div
+                            key={member.id}
+                            className="flex justify-between items-center"
+                          >
+                            <span className="text-sm">
+                              {member.users?.full_name ||
+                                member.users?.email ||
+                                "Unknown"}
+                            </span>
+                            <Badge variant="outline">{winRate}%</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Games Played</CardTitle>
+                    <CardDescription>Total sessions per player</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {members?.map((member) => {
+                        const memberSessions =
+                          sessions?.filter((session) =>
+                            session.game_session_players?.some(
+                              (p) => p.user_id === member.user_id,
+                            ),
+                          )?.length || 0;
+
+                        return (
+                          <div
+                            key={member.id}
+                            className="flex justify-between items-center"
+                          >
+                            <span className="text-sm">
+                              {member.users?.full_name ||
+                                member.users?.email ||
+                                "Unknown"}
+                            </span>
+                            <Badge variant="outline">{memberSessions}</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Most Played Games</CardTitle>
+                    <CardDescription>
+                      Popular games in your group
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(() => {
+                        const gameStats =
+                          sessions?.reduce(
+                            (acc, session) => {
+                              const gameName =
+                                session.games?.name || "Unknown Game";
+                              acc[gameName] = (acc[gameName] || 0) + 1;
+                              return acc;
+                            },
+                            {} as Record<string, number>,
+                          ) || {};
+
+                        return Object.entries(gameStats)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 3)
+                          .map(([game, count]) => (
+                            <div
+                              key={game}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-sm">{game}</span>
+                              <Badge variant="outline">{count} sessions</Badge>
+                            </div>
+                          ));
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Group Members</CardTitle>
+                  <CardDescription>
+                    Manage who can access this group
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {members?.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex justify-between items-center"
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {member.users?.full_name || "Unknown"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {member.users?.email || "No email"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              member.role === "admin" ? "default" : "secondary"
+                            }
+                          >
+                            {member.role}
+                          </Badge>
+                          {member.role !== "admin" &&
+                            membership?.role === "admin" && (
+                              <Button variant="outline" size="sm">
+                                Remove
+                              </Button>
+                            )}
+                        </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No sessions yet. Log your first game!
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import DashboardNavbar from "@/components/dashboard-navbar";
-import { Plus, Users, Calendar, Trophy } from "lucide-react";
+import { Plus, Users, Calendar, Trophy, UserPlus } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../supabase/server";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createGroupAction } from "@/app/actions";
+import { createGroupAction, joinGroupAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import Link from "next/link";
 
@@ -90,37 +90,71 @@ export default async function Dashboard() {
                 Manage your game groups and track sessions
               </p>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Group
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Group</DialogTitle>
-                  <DialogDescription>
-                    Create a new game group to start tracking sessions with your
-                    friends.
-                  </DialogDescription>
-                </DialogHeader>
-                <form action={createGroupAction} className="space-y-4">
-                  <div>
-                    <Label htmlFor="group_name">Group Name</Label>
-                    <Input
-                      id="group_name"
-                      name="group_name"
-                      placeholder="Enter group name"
-                      required
-                    />
-                  </div>
-                  <DialogFooter>
-                    <SubmitButton>Create Group</SubmitButton>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Group
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Group</DialogTitle>
+                    <DialogDescription>
+                      Create a new game group to start tracking sessions with
+                      your friends.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form action={createGroupAction} className="space-y-4">
+                    <div>
+                      <Label htmlFor="group_name">Group Name</Label>
+                      <Input
+                        id="group_name"
+                        name="group_name"
+                        placeholder="Enter group name"
+                        required
+                      />
+                    </div>
+                    <DialogFooter>
+                      <SubmitButton>Create Group</SubmitButton>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Join Group
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Join Group</DialogTitle>
+                    <DialogDescription>
+                      Enter a join code or invite link to join an existing
+                      group.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form action={joinGroupAction} className="space-y-4">
+                    <div>
+                      <Label htmlFor="join_code">Join Code</Label>
+                      <Input
+                        id="join_code"
+                        name="join_code"
+                        placeholder="Enter 6-character join code"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                    <DialogFooter>
+                      <SubmitButton>Join Group</SubmitButton>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           {/* Groups Grid */}
@@ -179,37 +213,71 @@ export default async function Dashboard() {
                     Create your first group to start tracking game sessions with
                     friends.
                   </p>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Your First Group
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Create New Group</DialogTitle>
-                        <DialogDescription>
-                          Create a new game group to start tracking sessions
-                          with your friends.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form action={createGroupAction} className="space-y-4">
-                        <div>
-                          <Label htmlFor="group_name">Group Name</Label>
-                          <Input
-                            id="group_name"
-                            name="group_name"
-                            placeholder="Enter group name"
-                            required
-                          />
-                        </div>
-                        <DialogFooter>
-                          <SubmitButton>Create Group</SubmitButton>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  <div className="flex gap-2 justify-center">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Group
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create New Group</DialogTitle>
+                          <DialogDescription>
+                            Create a new game group to start tracking sessions
+                            with your friends.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form action={createGroupAction} className="space-y-4">
+                          <div>
+                            <Label htmlFor="group_name">Group Name</Label>
+                            <Input
+                              id="group_name"
+                              name="group_name"
+                              placeholder="Enter group name"
+                              required
+                            />
+                          </div>
+                          <DialogFooter>
+                            <SubmitButton>Create Group</SubmitButton>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Join Group
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Join Group</DialogTitle>
+                          <DialogDescription>
+                            Enter a join code or invite link to join an existing
+                            group.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form action={joinGroupAction} className="space-y-4">
+                          <div>
+                            <Label htmlFor="join_code">Join Code</Label>
+                            <Input
+                              id="join_code"
+                              name="join_code"
+                              placeholder="Enter 6-character join code"
+                              maxLength={6}
+                              required
+                            />
+                          </div>
+                          <DialogFooter>
+                            <SubmitButton>Join Group</SubmitButton>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardContent>
               </Card>
             )}
