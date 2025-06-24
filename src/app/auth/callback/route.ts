@@ -8,10 +8,14 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("Error exchanging code for session: ", error);
+    }
   }
 
   // URL to redirect to after sign in process completes
   const redirectTo = redirect_to || "/dashboard";
+  console.log("redirectTo ", redirectTo);
   return NextResponse.redirect(new URL(redirectTo, requestUrl.origin));
 } 
