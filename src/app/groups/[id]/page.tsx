@@ -33,6 +33,7 @@ import {
 import { SubmitButton } from "@/components/submit-button";
 import Link from "next/link";
 import { ShareDialog } from "@/components/share-dialog";
+import { GameSessionPlayer, GameSession, GroupMember } from "@/types/supabase";
 
 interface GroupPageProps {
   params: {
@@ -213,7 +214,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                           {["win", "loss", "draw"].map((outcome) => {
                             const players =
                               session.game_session_players?.filter(
-                                (p) => p.outcome === outcome,
+                                (p: GameSessionPlayer) => p.outcome === outcome,
                               ) || [];
                             if (!players.length) return null;
 
@@ -223,7 +224,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                                   {outcome}
                                 </h4>
                                 <div className="space-y-1">
-                                  {players.map((player, idx) => (
+                                  {players.map((player: GameSessionPlayer, idx: number) => (
                                     <div key={idx} className="text-sm">
                                       {player.users?.full_name ||
                                         player.users?.email ||
@@ -302,20 +303,20 @@ export default async function GroupPage({ params }: GroupPageProps) {
                         const memberSessions =
                           sessions?.filter((session) =>
                             session.game_session_players?.some(
-                              (p) => p.user_id === member.user_id,
+                              (p: GameSessionPlayer) => p.user_id === member.user_id,
                             ),
-                          ) || [];
+                          )?.length || 0;
                         const wins =
                           sessions?.filter((session) =>
                             session.game_session_players?.some(
-                              (p) =>
+                              (p: GameSessionPlayer) =>
                                 p.user_id === member.user_id &&
                                 p.outcome === "win",
                             ),
                           )?.length || 0;
                         const winRate =
-                          memberSessions.length > 0
-                            ? Math.round((wins / memberSessions.length) * 100)
+                          memberSessions > 0
+                            ? Math.round((wins / memberSessions) * 100)
                             : 0;
 
                         return (
@@ -347,7 +348,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                         const memberSessions =
                           sessions?.filter((session) =>
                             session.game_session_players?.some(
-                              (p) => p.user_id === member.user_id,
+                              (p: GameSessionPlayer) => p.user_id === member.user_id,
                             ),
                           )?.length || 0;
 
@@ -379,15 +380,15 @@ export default async function GroupPage({ params }: GroupPageProps) {
                   <CardContent>
                     <div className="space-y-3">
                       {(() => {
-                        const gameStats =
+                        const gameStats: Record<string, number> =
                           sessions?.reduce(
-                            (acc, session) => {
+                            (acc: Record<string, number>, session) => {
                               const gameName =
                                 session.games?.name || "Unknown Game";
                               acc[gameName] = (acc[gameName] || 0) + 1;
                               return acc;
                             },
-                            {} as Record<string, number>,
+                            {},
                           ) || {};
 
                         return Object.entries(gameStats)

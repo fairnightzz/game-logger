@@ -163,7 +163,7 @@ export const regenerateInviteToken = async (groupId: string) => {
       return { success: false, error: "Failed to regenerate invite token" };
     }
 
-    if (!updatedGroup || updatedGroup.length === 0) {
+    if (!updatedGroup) {
       return {
         success: false,
         error: "Group not found or no permission to update",

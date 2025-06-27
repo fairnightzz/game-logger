@@ -363,3 +363,18 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// Group-related type definitions for joined data
+export type GameSessionPlayer = Tables<"game_session_players"> & {
+  users: Tables<"users"> | null;
+};
+
+export type GameSession = Tables<"game_sessions"> & {
+  games: Tables<"games"> | null;
+  users: Tables<"users"> | null;
+  game_session_players: GameSessionPlayer[] | null;
+};
+
+export type GroupMember = Tables<"group_members"> & {
+  users: Tables<"users"> | null;
+};
