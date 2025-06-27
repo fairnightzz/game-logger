@@ -8,8 +8,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tempo - Modern SaaS Starter",
-  description: "A modern full-stack starter template powered by Next.js",
+  title: "Game Night Logger",
+  description: "A tool to help you track your game night stats",
 };
 
 export default function RootLayout({
