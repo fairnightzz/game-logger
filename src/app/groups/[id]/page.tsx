@@ -10,7 +10,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, Trophy, Settings, Users, Share2 } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  Trophy,
+  Settings,
+  Users,
+  Share2,
+  ArrowLeft,
+  Copy,
+  Check,
+} from "lucide-react";
 import { LogSessionForm } from "@/components/log-session-form";
 import {
   Dialog,
@@ -20,6 +30,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { SubmitButton } from "@/components/submit-button";
+import Link from "next/link";
+import { ShareDialog } from "@/components/share-dialog";
 
 interface GroupPageProps {
   params: {
@@ -113,15 +126,22 @@ export default async function GroupPage({ params }: GroupPageProps) {
       <main className="w-full">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold">{group.name}</h1>
-              <p className="text-muted-foreground">
-                {members?.length || 0} members • Created{" "}
-                {new Date(group.created_at).toLocaleDateString()}
-              </p>
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <Button variant="outline" size="icon">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold">{group.name}</h1>
+                <p className="text-muted-foreground">
+                  {members?.length || 0} members • Created{" "}
+                  {new Date(group.created_at).toLocaleDateString()}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end">
               <Dialog>
                 <DialogTrigger asChild>
                   <Button>
@@ -143,10 +163,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                   />
                 </DialogContent>
               </Dialog>
-              <Button variant="outline">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+              <ShareDialog group={group} />
             </div>
           </div>
 

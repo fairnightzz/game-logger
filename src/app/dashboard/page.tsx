@@ -37,7 +37,7 @@ export default async function Dashboard() {
     return redirect("/sign-in");
   }
 
-  // Get user's groups
+  // Get user's groups with member and session counts
   const { data: userGroups } = await supabase
     .from("group_members")
     .select(
@@ -54,6 +54,39 @@ export default async function Dashboard() {
     )
     .eq("user_id", user.id)
     .order("joined_at", { ascending: false });
+
+  // Get member counts for each group
+  const groupIds =
+    userGroups?.map((ug) => ug.game_groups?.id).filter(Boolean) || [];
+  const { data: memberCounts } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .in("group_id", groupIds);
+
+  // Get session counts for each group
+  const { data: sessionCounts } = await supabase
+    .from("game_sessions")
+    .select("group_id")
+    .in("group_id", groupIds);
+
+  // Create count maps
+  const memberCountMap =
+    memberCounts?.reduce(
+      (acc, member) => {
+        acc[member.group_id] = (acc[member.group_id] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    ) || {};
+
+  const sessionCountMap =
+    sessionCounts?.reduce(
+      (acc, session) => {
+        acc[session.group_id] = (acc[session.group_id] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    ) || {};
 
   // Get recent sessions across all groups
   const { data: recentSessions } = await supabase
@@ -148,6 +181,15 @@ export default async function Dashboard() {
                         required
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="invite_token">Invite Token</Label>
+                      <Input
+                        id="invite_token"
+                        name="invite_token"
+                        placeholder="Enter invite token"
+                        required
+                      />
+                    </div>
                     <DialogFooter>
                       <SubmitButton>Join Group</SubmitButton>
                     </DialogFooter>
@@ -190,11 +232,11 @@ export default async function Dashboard() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4" />
-                          <span>Members</span>
+                          <span>{memberCountMap[group.id] || 0} Members</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          <span>Sessions</span>
+                          <span>{sessionCountMap[group.id] || 0} Sessions</span>
                         </div>
                       </div>
                     </CardContent>
@@ -268,6 +310,15 @@ export default async function Dashboard() {
                               name="join_code"
                               placeholder="Enter 6-character join code"
                               maxLength={6}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="invite_token">Invite Token</Label>
+                            <Input
+                              id="invite_token"
+                              name="invite_token"
+                              placeholder="Enter invite token"
                               required
                             />
                           </div>

@@ -15,6 +15,7 @@ export type Database = {
           created_by: string | null
           id: string
           invite_token: string
+          invite_token_expires_at: string | null
           join_code: string
           name: string
         }
@@ -23,6 +24,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           invite_token: string
+          invite_token_expires_at?: string | null
           join_code: string
           name: string
         }
@@ -31,6 +33,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           invite_token?: string
+          invite_token_expires_at?: string | null
           join_code?: string
           name?: string
         }

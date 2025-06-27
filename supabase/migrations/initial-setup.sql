@@ -68,14 +68,14 @@ ALTER TABLE public.game_session_players ENABLE ROW LEVEL SECURITY;
 -- Helper function for group membership
 CREATE OR REPLACE FUNCTION is_group_member(gid UUID)
 RETURNS BOOLEAN
-LANGUAGE sql STABLE PARALLEL SAFE AS $
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT EXISTS (
     SELECT 1
     FROM group_members gm
     WHERE gm.group_id = gid
       AND gm.user_id = auth.uid()
   );
-$;
+$$;
 
 -- RLS Policies
 
@@ -96,6 +96,10 @@ CREATE POLICY "Group members can view groups" ON public.game_groups
 DROP POLICY IF EXISTS "Users can create groups" ON public.game_groups;
 CREATE POLICY "Users can create groups" ON public.game_groups
   FOR INSERT WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Group members can update groups" ON public.game_groups;
+CREATE POLICY "Group members can update groups" ON public.game_groups
+  FOR UPDATE USING (is_group_member(id));
 
 -- Group members policies
 DROP POLICY IF EXISTS "Group members can view membership" ON public.group_members;
@@ -155,7 +159,7 @@ CREATE POLICY "Group members can delete session players" ON public.game_session_
 
 -- User creation trigger
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.users (
     id,
@@ -174,7 +178,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -195,4 +199,4 @@ ON CONFLICT (name) DO NOTHING;
 alter publication supabase_realtime add table game_groups;
 alter publication supabase_realtime add table group_members;
 alter publication supabase_realtime add table game_sessions;
-alter publication supabase_realtime add table game_session_players; 
+alter publication supabase_realtime add table game_session_players;

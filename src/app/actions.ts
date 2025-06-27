@@ -69,9 +69,10 @@ export const createGroupAction = async (formData: FormData) => {
       );
     }
 
-    // Generate unique join code and invite token
+    // Generate unique join code and invite token with expiration
     const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const inviteToken = crypto.randomUUID();
+    const inviteTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
 
     // Create the group
     const { data: group, error: groupError } = await supabase
@@ -80,6 +81,7 @@ export const createGroupAction = async (formData: FormData) => {
         name: groupName,
         join_code: joinCode,
         invite_token: inviteToken,
+        invite_token_expires_at: inviteTokenExpiresAt.toISOString(),
         created_by: user.id,
       })
       .select()
@@ -115,6 +117,64 @@ export const createGroupAction = async (formData: FormData) => {
   // Redirect outside of try-catch block
   revalidatePath("/dashboard");
   redirect(`/groups/${groupId}`);
+};
+
+export const regenerateInviteToken = async (groupId: string) => {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return { success: false, error: "You must be logged in" };
+  }
+
+  try {
+    // Verify user is a member of the group
+    const { data: membership } = await supabase
+      .from("group_members")
+      .select("role")
+      .eq("group_id", groupId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!membership) {
+      return { success: false, error: "You are not a member of this group" };
+    }
+
+    // Generate new invite token with expiration
+    const newInviteToken = crypto.randomUUID();
+    const newExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Update the group with new token
+    const { data: updatedGroup, error: updateError } = await supabase
+      .from("game_groups")
+      .update({
+        invite_token: newInviteToken,
+        invite_token_expires_at: newExpiresAt.toISOString(),
+      })
+      .eq("id", groupId)
+      .select("id, name, join_code, invite_token, invite_token_expires_at")
+      .single();
+
+    if (updateError) {
+      console.error("Error updating invite token:", updateError);
+      return { success: false, error: "Failed to regenerate invite token" };
+    }
+
+    if (!updatedGroup || updatedGroup.length === 0) {
+      return {
+        success: false,
+        error: "Group not found or no permission to update",
+      };
+    }
+
+    return { success: true, group: updatedGroup };
+  } catch (error) {
+    console.error("Error regenerating invite token:", error);
+    return { success: false, error: "Failed to regenerate invite token" };
+  }
 };
 
 export const logSessionAction = async (formData: FormData) => {
@@ -227,6 +287,40 @@ export const logSessionAction = async (formData: FormData) => {
   redirect(`/groups/${groupId}`);
 };
 
+export const verifyJoinCodeAndToken = async (
+  joinCode: string,
+  inviteToken: string,
+) => {
+  const supabase = await createClient();
+
+  try {
+    // Find group by join code and invite token
+    const { data: group, error: groupError } = await supabase
+      .from("game_groups")
+      .select("id, name, join_code, invite_token, invite_token_expires_at")
+      .eq("join_code", joinCode.toUpperCase())
+      .eq("invite_token", inviteToken)
+      .single();
+
+    if (groupError || !group) {
+      return { success: false, error: "Invalid join code or invite token" };
+    }
+
+    // Check if invite token is expired
+    const now = new Date();
+    const expiresAt = new Date(group.invite_token_expires_at);
+
+    if (now > expiresAt) {
+      return { success: false, error: "Invite token has expired" };
+    }
+
+    return { success: true, group };
+  } catch (error) {
+    console.error("Error verifying join code and token:", error);
+    return { success: false, error: "Failed to verify credentials" };
+  }
+};
+
 export const joinGroupAction = async (formData: FormData) => {
   const supabase = await createClient();
 
@@ -243,9 +337,14 @@ export const joinGroupAction = async (formData: FormData) => {
   }
 
   const joinCode = formData.get("join_code")?.toString()?.toUpperCase();
+  const inviteToken = formData.get("invite_token")?.toString();
 
-  if (!joinCode) {
-    return encodedRedirect("error", "/dashboard", "Join code is required");
+  if (!joinCode || !inviteToken) {
+    return encodedRedirect(
+      "error",
+      "/dashboard",
+      "Both join code and invite token are required",
+    );
   }
 
   let groupId: string;
@@ -266,20 +365,18 @@ export const joinGroupAction = async (formData: FormData) => {
       );
     }
 
-    // Find the group by join code
-    const { data: group, error: groupError } = await supabase
-      .from("game_groups")
-      .select("id")
-      .eq("join_code", joinCode)
-      .single();
+    // Verify join code and invite token
+    const verification = await verifyJoinCodeAndToken(joinCode, inviteToken);
 
-    if (groupError || !group) {
+    if (!verification.success || !verification.group) {
       return encodedRedirect(
         "error",
         "/dashboard",
-        "Invalid join code. Please check and try again.",
+        verification.error || "Invalid credentials",
       );
     }
+
+    const group = verification.group;
 
     // Check if user is already a member
     const { data: existingMembership } = await supabase
