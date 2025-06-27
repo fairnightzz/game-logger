@@ -203,7 +203,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
                             return (
                               <div key={outcome}>
                                 <h4 className="font-medium mb-2 capitalize">
-                                  {outcome}s
+                                  {outcome}
                                 </h4>
                                 <div className="space-y-1">
                                   {players.map((player, idx) => (
