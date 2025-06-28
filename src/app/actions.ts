@@ -294,27 +294,26 @@ export const verifyJoinCodeAndToken = async (
   const supabase = await createClient();
 
   try {
-    // Find group by join code and invite token
-    const { data: group, error: groupError } = await supabase
-      .from("game_groups")
-      .select("id, name, join_code, invite_token, invite_token_expires_at")
-      .eq("join_code", joinCode.toUpperCase())
-      .eq("invite_token", inviteToken)
-      .single();
+    // Use the secure function to get group info with token verification
+    const { data: groupInfo, error: groupError } = await supabase
+      .rpc('get_group_by_join_code_and_token', { 
+        join_code_param: joinCode.toUpperCase(),
+        token_param: inviteToken 
+      });
 
-    if (groupError || !group) {
+    if (groupError || !groupInfo || groupInfo.length === 0) {
       return { success: false, error: "Invalid join code or invite token" };
     }
 
-    // Check if invite token is expired
-    const now = new Date();
-    const expiresAt = new Date(group.invite_token_expires_at);
+    const group = groupInfo[0];
 
-    if (now > expiresAt) {
-      return { success: false, error: "Invite token has expired" };
-    }
-
-    return { success: true, group };
+    return { success: true, group: {
+      id: group.id,
+      name: group.name,
+      join_code: joinCode.toUpperCase(),
+      invite_token: inviteToken,
+      member_count: group.member_count
+    }};
   } catch (error) {
     console.error("Error verifying join code and token:", error);
     return { success: false, error: "Failed to verify credentials" };
@@ -365,52 +364,38 @@ export const joinGroupAction = async (formData: FormData) => {
       );
     }
 
-    // Verify join code and invite token
-    const verification = await verifyJoinCodeAndToken(joinCode, inviteToken);
+    // Use the secure function to verify and join the group
+    const { data: joinResult, error: joinError } = await supabase
+      .rpc('verify_and_join_group', { 
+        join_code_param: joinCode,
+        token_param: inviteToken 
+      });
 
-    if (!verification.success || !verification.group) {
+    if (joinError || !joinResult || joinResult.length === 0) {
       return encodedRedirect(
         "error",
         "/dashboard",
-        verification.error || "Invalid credentials",
+        "Failed to join group. Please check your credentials and try again.",
       );
     }
 
-    const group = verification.group;
+    const result = joinResult[0];
 
-    // Check if user is already a member
-    const { data: existingMembership } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", group.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (existingMembership) {
+    if (!result.success) {
       return encodedRedirect(
         "error",
         "/dashboard",
-        "You are already a member of this group",
+        result.error_message || "Invalid credentials",
       );
     }
 
-    // Add user as member
-    const { error: memberError } = await supabase.from("group_members").insert({
-      user_id: user.id,
-      group_id: group.id,
-      role: "member",
-    });
-
-    if (memberError) {
-      console.error("Member creation error:", memberError);
-      return encodedRedirect(
-        "error",
-        "/dashboard",
-        "Failed to join group. Please try again.",
-      );
+    // If already a member, redirect to group
+    if (result.error_message === 'Already a member') {
+      revalidatePath("/dashboard");
+      redirect(`/groups/${result.group_id}`);
     }
 
-    groupId = group.id;
+    groupId = result.group_id;
   } catch (error) {
     console.error("Error joining group:", error);
     return encodedRedirect("error", "/dashboard", "Failed to join group");

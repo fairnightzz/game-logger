@@ -55,6 +55,8 @@ export default async function Dashboard() {
     .eq("user_id", user.id)
     .order("joined_at", { ascending: false });
 
+  console.log("userGroups ", userGroups);
+
   // Get member counts for each group
   const groupIds =
     userGroups?.map((ug) => ug.game_groups?.id).filter(Boolean) || [];
